@@ -24,7 +24,9 @@ I will try to keep my social interactions to a minimum for the next days.
 rather than strict measures.)
 
 Today, I'm all alone, which means that this is perfect to get some work done.
-As my host at Vrije Universiteit Amsterdam, Jasmin Blanchette, is not here yet,
+As my host at Vrije Universiteit Amsterdam,
+[Jasmin Blanchette](http://www21.in.tum.de/~blanchet/),
+is not here yet,
 I have enjoyed my first work day at my cozy little apartment in Amstelveen
 (except for when planes are flying over it).
 
