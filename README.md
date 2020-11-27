@@ -59,8 +59,8 @@ For the Rust prover:
 It really itches me to make a small `jq` replacement that is actually fast ...
 
 Anyway, a quite nice result from this week is that with 1 second timeout,
-the Rust leanCoP proves 40 problems more (+6.4%) than
-the fastest OCaml leanCoP (stackCoP).
+the Rust leanCoP proves 6.4% more problems (663) than
+stackCoP, i.e. the fastest leanCoP version implemented in OCaml (623).
 The inference rate seems to be about three times higher!
 This makes it interesting to see how the Rust prover will fare against the C version ...
 
