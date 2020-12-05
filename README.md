@@ -3,6 +3,103 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2020-12-04
+----------
+
+This week, I took a break from my usual research in order to
+create an alternative to a tool I was counting on to use for my research: `jq`.
+(I am going to talk about `jq` 1.6 for the rest of this post.)
+As mentioned last week, the startup time of `jq`
+is simply too high for me to make it usable.
+For example, to read a number and output it again, `jq` takes about 50ms!
+
+~~~
+$ hyperfine "echo '0' | jq '.'"
+Benchmark #1: echo '0' | jq '.'
+  Time (mean ± s):      52.5 ms ±   1.2 ms    [User: 51.7 ms, System: 1.0 ms]
+  Range (min … max):    50.9 ms …  55.6 ms    53 runs
+~~~
+
+[The problem is known since at least 2017](https://github.com/stedolan/jq/issues/1411),
+yet I found no sign of progress on solving it since.
+As one of the basic premises of my research project was
+to use more disciplined, less ad-hoc formats to capture data,
+the JSON format imposed itself as an easily readable and writable,
+de facto standard with lots of tool support.
+Having a painless and fast way to interpret JSON data is thus indispensable for me.
+However, the aforementioned speed bottlenecks of `jq` are detrimental to this goal.
+
+I thus attempted to recreate a tool that permits using the same syntax as `jq`,
+but should start up faster in order to allow for the processing of many small files.
+My goal was to have a working tool at the end of this week
+that should support a large set of operations that `jq` supports.
+I baptised this tool `jaq` (to be pronounced like "Jacques") and
+made it available at <https://github.com/01mf02/jaq>.
+
+To motivate this a bit more, I give an example of a task that I wanted to perform.
+When running my automated theorem prover, I output at certain points
+how many inferences it has performed.
+The output looks like this:
+
+~~~
+{ "pathlim" : 1 , "inferences" : 11 }
+{ "pathlim" : 2 , "inferences" : 577 }
+{ "pathlim" : 3 , "inferences" : 7393 }
+{ "pathlim" : 4 , "inferences" : 110791 }
+~~~
+
+At the end, I want to sum the number of inferences to retrieve
+the total number of inferences, i.e. 11 + 577 + 7393 + 110791.
+With `jq`, I would obtain this as follows:
+
+    jq -s '[.[].inferences] | add'
+
+This command
+reads the whole file into a single array (`-s` for "slurp"), then
+obtains the array elements with `.[]`,
+obtains the inferences values with `.inferences`,
+puts the results back into an array `[.[].inferences]`, in order to finally
+feed the resulting array with `|` to a function that adds the values.
+This outputs the desired value "118772" when
+being given the data above via standard input.
+
+However, this takes `jq`, due the slow startup as mentioned above, about 50ms.
+For a dataset of 2073 files of this shape, `jq` takes a whopping 114 seconds.
+In contrast, my new tool, `jaq`, takes only about 8 seconds,
+meaning that it is about 14 times faster on this particular input.
+Of course, this does not mean that `jaq` is always faster than `jq`.
+For example, take the [open Paris street name data](https://opendata.paris.fr/explore/dataset/noms_voies_actuelles_paris).
+Let us try to get the names of all streets in Paris:
+
+    jq '.[].fields["nom_de_voie"]' < noms_voies_actuelles_paris.json
+
+Here, `jq` takes only about 280ms, whereas `jaq` currently takes about 350ms.
+However, taking into account that this is the state after five days of development
+with little focus on optimisation, whereas there are years of development behind `jq`,
+I personally find that already impressive enough.
+
+This amazing ratio between performance and development time
+would not have been possible without the programming language Rust,
+in which I wrote `jaq`.
+In particular, the parser generator [`pest`](https://pest.rs/)
+(with which I had no experience before the start of this week)
+was crucial to rapidly create a parser for a large subset of the `jq` language.
+Furthermore, the packages `serde_json` and `colored_json` to read and output JSON
+allowed me to concentrate on the program logic as much as possible.
+
+My plan is to implement all functions of `jq` in `jaq` which
+`jaq` can currently parse, but not execute, such as
+if-then-else, arithmetic on non-numeric values, and iteration over object values.
+Furthermore, I would like to implement a few more useful functions,
+such as `map`, `select`, and most importantly `recurse`,
+which corresponds to a fixed-point combinator and should make `jaq` Turing-complete.
+I estimate this to be doable in one week.
+This should prepare the ground for other people to productively use `jaq`
+as well as to extend it in order to more closely match `jq`'s functionality.
+
+And then, it's back to theorem proving, baby! :)
+
+
 2020-11-27
 ----------
 
