@@ -3,6 +3,13 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2020-12-15
+----------
+
+Last week, I brought my jq clone, jaq, into a usable state.
+Its functions are documented at: <https://github.com/01mf02/jaq>
+
+
 2020-12-04
 ----------
 
