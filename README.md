@@ -3,6 +3,21 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2020-12-23
+----------
+
+I have greatly cleaned up the clausal proof search.
+Furthermore, I have implemented a small proof checker
+that is being run after proof search.
+This should help me validate the correct function of the prover and
+find out whether the behaviour I described on [2020-11-27](#2020-11-27)
+is sound or not.
+Unfortunately, before leaving Amsterdam for Tyrol, I forgot to
+synchronise my evaluation infrastructure between my main computer and my laptop,
+so I am currently without evaluation infrastructure.
+I will wait for the evaluation until I have access to my main computer again.
+
+
 2020-12-15
 ----------
 
