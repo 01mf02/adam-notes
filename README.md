@@ -3,6 +3,119 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-01-08
+----------
+
+Welcome to 2021!
+I have gotten back to work quite refreshed from my Christmas holidays,
+during which I have gotten used to sleeping much longer (about 10h).
+I found this to vastly improve my productivity,
+and even rendering my need for siestas obsolete. ;)
+
+This week, I believe to have understood the behaviour
+I previously described on [2020-11-27](#2020-11-27).
+I think that the behaviour is indeed sound,
+and my evaluations have indicated that
+it greatly improves the prover power.
+
+So what is this all about?
+In leanCoP, we have two backtracking strategies:
+cut, or no cut.
+Suppose we have to refute a literal `p`.
+With cut, if we are able to refute `p` starting with some extension step,
+then this refutation of `p` is fixed, meaning that
+even if at some later point we are not able to complete the proof,
+we are never going to try to find an alternative refutation of `p`.
+Without cut, leanCoP will also try to find alternative refutations of `p`,
+backtracking to *anywhere inside* the refutation of `p`.
+The strategy I discovered will also consider alternative refutations of `p`,
+but it is also incomplete because it will only allow backtracking to
+*the very first* proof step in the refutation of `p`, i.e.
+it will choose a different extension step for `p`.
+(Do not worry if you do not understand this
+by my relatively hand-wavy description,
+I have some graphics that should illustrate this way better.)
+In that sense, the new strategy retains soundness,
+because it still covers a (strict) subset of
+the search space covered by the complete strategy.
+However, it is "less incomplete" than the basic cut strategy,
+because it will allow for more backtracking to happen.
+Accordingly, I call "deep cut" what leanCoP usually calls "cut",
+whereas "shallow cut" is my less invasive cut. (Think surgery.)
+It is between cut and no cut.
+
+To verify my understanding of the new strategy,
+I created a test problem (`shallowcut.p`),
+which deep cut can never solve,
+but both shallow cut and the complete strategy can,
+with the shallow cut strategy taking one inference step less.
+This example has made me confident about my understanding of the issue.
+
+To evaluate my prover with larger timeout, I really needed access to some cluster.
+I found that the old server I used in Innsbruck (colo12)
+is able to run a Rust toolchain,
+which is not something to take for granted given that
+I had already spent hours to install OCaml on it
+(due to the server's ancient glibc).
+Luckily, it took me less than five minutes to
+install Rust and compile my prover on the server.
+I evaluated the bushy and chainy datasets, each with a timeout of 10 seconds.
+The results are as follows:
+
+Configuration       | Bushy | Chainy
+------------------- | ----: | -----:
+cop-conj-deepcut    |   727 |    331
+cop-conj-shallowcut |   845 |    293
+Union               |   901 |    376
+
+For the bushy dataset, my shallow cut strategy yields outstanding results:
+Just the shallow cut strategy solves **16.2%** more problems than
+the deep cut strategy (known to me as the previously best single strategy),
+and together they solve **23.9%** more problems than deep cut,
+indicating that the two strategies are relatively complementary.
+For the chainy datasets, shallow cut proves fewer problems than deep cut,
+but at least the union improves by 13.6%, still indicating nice complementarity.
+
+(There seems to be a problem with the configuration "cop-conj",
+which currently only proves 211 problems, which is way below
+the 499 solved problems reported in my
+[JAR paper](https://dx.doi.org/10.1007/s10817-020-09576-7)
+for the corresponding fleanCoP configuration.
+I have to investigate this.)
+
+In the light of these very promising results,
+I am considering to submit an article to
+[CADE-28](https://www.cs.cmu.edu/~mheule/CADE28/),
+giving me the following deadlines:
+
+* Abstract   deadline: February 15, 2021
+* Submission deadline: February 22, 2021
+
+That gives me about six weeks to write.
+In the article, I would like to cover the following topics:
+
+* the promises/alternatives architecture
+  (while it is mostly what Cezary has described,
+  I believe to have a nice formulation of it),
+* the backtracking stack to enable unrestricted backtracking
+  (see [2020-11-20](#2020-11-20)),
+* the new, less restricted backtracking strategy.
+
+I have already started work on the article.
+The current biggest obstacle for my work is ergonomics;
+the table I am writing on right now is clearly not fit for work,
+and I had to frequently stop working because of hand/arm pain.
+Now that I use some cushions, it is a bit better,
+but I am religiously awaiting my new furniture and chair I ordered.
+Unfortunately, I also could not go to university yet due to quarantine ...
+
+Apart from this, I would like to know how easy it would be to
+integrate the new search strategy into, say, Prolog leanCoP,
+or one of the various OCaml implementations.
+My hypothesis is that the promise/alternative architecture is crucial for this,
+but I would like to stand disproved.
+
+
 2020-12-23
 ----------
 
