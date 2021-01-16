@@ -3,6 +3,76 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-01-15
+----------
+
+This week, I have corrected the complete strategy of my prover.
+To diagnose the problem, I looked for problems for which
+(a) proofs were found by both my new prover and the original leanCoP,
+(b) the number of inferences diverges, and
+(c) the number of inferences is as small as possible (to ease the manual inspection).
+After a few hours, I found the culprit:
+Incomplete strategies always backtrack to
+path and lemmas that are prefixes of the current path and lemmas, whereas
+complete strategies may backtrack to
+path and lemmas that are not prefixes of the current path and lemmas.
+(I call the pair of path and lemmas *context*.)
+However, so far in the prover, there was
+only one global `Vec` for each path and lemmas,
+which cannot capture the backtracking behaviour of the complete strategy.
+
+The naive way to handle this problem is to clone the context
+whenever one creates an alternative (to backtrack to).
+However, in my experiments, this slowed the prover down
+by about 50% in the incomplete strategies.
+I determined this number by finding the problem
+that is taking the longest time to solve via:
+
+    for i in *.o; do FILE=`basename $i .o`.time; echo `jaq '.elapsed' < $FILE` $FILE ; done | sort -n
+
+Then, I ran the prover with cloning contexts on this problem again,
+measuring the difference.
+
+To solve the problem more efficiently, I thought about using
+the backtracking stack (see [2020-11-20](#2020-11-20)),
+but I could not figure out a way to make this work here ---
+it is probably not the right data structure for the context.
+In the end, I went for a quick-and-dirty solution:
+Whenever we use a complete strategy, we now
+save a clone of the current context on creating an alternative, and
+whenever we use an incomplete strategy, we only
+save a pointer (containing path and lemmas length) to the context.
+With this method, we reach good performance
+for both complete and incomplete strategies:
+On the bushy dataset with a timeout of 1 second, we solve
+504 problems in the complete (`--conj`) configuration and
+748 problems in an incomplete (`--conj --cut shallow`) configuration
+(measured on my Intel NUC).
+In the JAR paper, fleanCoP (leanCoP implemented in OCaml with streams)
+with the same settings (`--conj`) and 10 seconds timeout
+proves only 499 problems!
+That means that we now solve more problems in just 1/10 of the time.
+
+By the way, when evaluations are running and I want to get a prognosis of
+the percentage of solved problems, I use the following command:
+
+    echo scale=3\;`ls *.o | wc -l`/`ls *.p | wc -l` | bc
+
+Together with `watch`, this can provide an interactive, progressive evaluation.
+
+Apart from this, I went to university on Tuesday
+(for the first time in the last 12 months!), where
+I retrieved my access credentials.
+I checked out the new building (into which I had never set foot before),
+and it was quite nice.
+A friendly soul even helped me for half an hour to set up printer access.
+
+On Thursday, I came back to university to have some video conferences with
+students who were interested in me supervising their bachelor's thesis.
+I am now awaiting their reactions next week
+to see whether they are still interested. ;)
+
+
 2021-01-08
 ----------
 
