@@ -40,7 +40,7 @@ The best configuration is shown in bold.
 
 | Cut           |   bushy |  chainy |     TPTP |     Miz40 |   FS-top |
 | ------------- | ------: | ------: | -------: | --------: | -------: |
-| $\emptyset$   |     479 |     172 |     1501 |      8046 |     3729 |
+| None          |     479 |     172 |     1501 |      8046 |     3729 |
 | R             |     581 |     206 |     1629 |     11632 |     3954 |
 | ED            |     642 |     232 |     1712 |     12109 |     3830 |
 | ES            |     695 |     210 |     1741 |     13121 |     4174 |
@@ -67,7 +67,7 @@ For the bushy dataset:
     done | sort -n
 
 It looks like the most efficient combination of strategies
-is most frequently RES + RED + $\emptyset$ or RES + RED + R.
+is most frequently RES + RED + None or RES + RED + R.
 
 As a small side project, I also made the connection prover
 [`no_std`](https://rust-embedded.github.io/book/intro/no-std.html) compliant.
