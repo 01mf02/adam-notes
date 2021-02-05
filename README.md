@@ -29,7 +29,7 @@ To run these, I used the following command in the `cop-rs/eval` directory:
 
     SETS={bushy,chainy,TPTP-v6.3.0,miz40-deps.a15,flyspeck-top}
     CFGS=leancop--conj{,--cutred}{,--cutextshallow,--cutextdeep}
-    eval make o/$SETS/1s/$CFGS
+    eval make o/$SETS/1s/$CFGS -j40
 
 The preliminary outcome on a 1 second timeout is shown in the following table.
 In the cut column,
