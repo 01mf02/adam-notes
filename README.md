@@ -3,6 +3,80 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-02-05
+----------
+
+Last week, I have refined the backtracking data types.
+In particular, [the week before](#2021-01-15),
+I silently used singly-linked lists, hoping that
+the increased speed for cloning lists might make up for the slow traversal.
+It turns out I was wrong; using `Vec`s instead is clearly faster,
+despite their cloning overhead.
+
+This week, I found out that it makes sense to distinguish cut on
+reduction and extension steps:
+There is only one kind of cut on reduction steps, namely
+the cut that excludes all other alternatives on solving a literal.
+There are two kinds of cut on extension steps, namely
+the cut that excludes all other alternatives on solving a literal (deep) and
+the cut that excludes only those alternatives that start with the same extension step (shallow).
+So far, what I called "shallow cut" always implied the cut on reduction steps.
+I now made this optional, making the description of shallow cut simpler.
+As it turns out, switching off the cut on reduction steps gives usually worse results.
+
+I have also started running evaluations on several datasets.
+To run these, I used the following command in the `cop-rs/eval` directory:
+
+    SETS={bushy,chainy,TPTP-v6.3.0,miz40-deps.a15,flyspeck-top}
+    CFGS=leancop--conj{,--cutred}{,--cutextshallow,--cutextdeep}
+    eval make o/$SETS/1s/$CFGS
+
+The preliminary outcome on a 1 second timeout is shown in the following table.
+In the cut column,
+"R" stands for cut on reduction steps,
+"ED" stands for deep cut on extension steps, and
+"ES" stands for shallow cut on extension steps.
+The best configuration is shown in bold.
+
+| Cut           |   bushy |  chainy |     TPTP |     Miz40 |   FS-top |
+| ------------- | ------: | ------: | -------: | --------: | -------: |
+| $\emptyset$   |     479 |     172 |     1501 |      8046 |     3729 |
+| R             |     581 |     206 |     1629 |     11632 |     3954 |
+| ED            |     642 |     232 |     1712 |     12109 |     3830 |
+| ES            |     695 |     210 |     1741 |     13121 |     4174 |
+| RED           |     655 | **244** |     1718 |     12120 |     3870 |
+| RES           | **723** |     238 | **1810** | **13894** | **4432** |
+
+The table was created with the help of the following commands:
+
+    eval make -f solved.mk solved/$SETS/1s/$CFGS
+    for s in `eval echo $CFGS`; do echo -n $s; for i in `eval echo $SETS`; do echo -n " |" `cat solved/$i/1s/$s | wc -l`; done; echo; done
+    sed -e 's/leancop--conj//' -e 's/--cutred/R/' -e 's/--cutext/E/' -e 's/shallow/S/' -e 's/deep/D/'
+    pandoc -t gfm
+
+I also had a quick look at which combination of strategies was most efficient,
+that is, which are the three strategies of which the union of solved problems is maximal?
+For the bushy dataset:
+
+    for s1 in `eval echo $CFGS`; do
+    for s2 in `eval echo $CFGS`; do
+    for s3 in `eval echo $CFGS`; do
+    echo `cat solved/bushy/1s/{$s1,$s2,$s3} | sort | uniq | wc -l` $s1 $s2 $s3;
+    done;
+    done;
+    done | sort -n
+
+It looks like the most efficient combination of strategies
+is most frequently RES + RED + $\emptyset$ or RES + RED + R.
+
+As a small side project, I also made the connection prover
+[`no_std`](https://rust-embedded.github.io/book/intro/no-std.html) compliant.
+That means that it should be possible to compile it to platforms such as WASM,
+enabling it for the use in web sites!
+(Or I could do it like Jens and compile it to an iPod. ^^)
+I have now assigned two students to make a web site allowing the usage of the prover.
+
+
 2021-01-15
 ----------
 
