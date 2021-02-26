@@ -3,6 +3,69 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-02-26
+----------
+
+I finished the CADE-28 article. Finally! It has been quite a stretch at the end ...
+The result can be admired [here](http://cl-informatik.uibk.ac.at/users/mfaerber/cade-28.html).
+Given that my sleep has suffered quite a bit due to the paper writing,
+I will take the next week off. I truly have some garbage collection to do.
+
+On Monday, I learned during the group lunch that
+SWI-Prolog was made by
+[Jan Wielemaker](https://en.wikipedia.org/wiki/Jan_Wielemaker) at the Vrije Universiteit, and that
+[Andrew S. Tanenbaum](https://en.wikipedia.org/wiki/Andrew_S._Tanenbaum)
+is strongly linked to the VU as well.
+This led me also to discover one of the founders of logic programming,
+Maarten van Emden, who has some nice essays on
+[his web site](http://webhome.cs.uvic.ca/~vanemden/).
+
+What follows are various commands that I used to analyse data for the CADE-28 evaluation.
+
+To calculate the union of solved problems for different strategies:
+
+All previously existing strategies (not containing shallow cut):
+
+    for i in `eval echo $SETS`; do echo -n " |" `ls solved/$i/10s/* | grep -v shallow | xargs cat | sort -n | uniq | wc -l`; done
+
+Two best strategies (RES and RED):
+
+    for i in `eval echo $SETS`; do echo -n " |" `cat solved/$i/10s/leancop--conj--cutred--cutext* | sort -n | uniq | wc -l`; done
+
+All strategies:
+
+    for i in `eval echo $SETS`; do echo -n " |" `cat solved/$i/10s/* | sort -n | uniq | wc -l`; done
+
+To calculate the times of solved problems:
+
+For meanCoP:
+
+    for i in `grep -l "% SZS status Theorem" o/bushy/10s/leancop--conj--cutred--cutextdeep/*.p`; do jaq '.user' < $i.time; done
+
+For leanCoP:
+
+    for i in `grep -l "p is a Theorem" out/bushy/jar/plleancop-171116-nodef-cut-conj/*`; do grep "elapsed" $i.time | cut -d "u" -f 1; done
+
+For Vampire:
+
+    for i in `grep -l "SZS status Theorem" out/bushy/jar/vampire-4.0-casc/*`; do grep "elapsed" $i.time | cut -d "u" -f 1; done
+
+Every command is then piped to `sort -n | awk '{print $s " " NR}'`.
+This data can be plotted using the approach from
+<http://gedenkt.at/blog/plotting-integrated-data/>.
+
+The raw output of the evaluation was saved as follows:
+
+    tar cjf out.tar.bz2 --exclude=*.o --exclude-from <(find o/ -type f -size +1k) o/
+
+I noticed that some inference statistics files were several megabytes large,
+especially for the incomplete prover strategies.
+That is why I exclude any of these that are over 1kB, because I expect those to
+rarely correspond to a proof.
+In the long run, it would be good to
+detect such cases automatically and report Non-Theorem.
+
+
 2021-02-05
 ----------
 
@@ -64,7 +127,7 @@ For the bushy dataset:
     echo `cat solved/bushy/1s/{$s1,$s2,$s3} | sort | uniq | wc -l` $s1 $s2 $s3;
     done;
     done;
-    done | sort -n
+    done | sed -e 's/leancop--conj//g' -e 's/--cutred/R/g' -e 's/--cutext/E/g' -e 's/shallow/S/g' -e 's/deep/D/g' | sort -n
 
 It looks like the most efficient combination of strategies
 is most frequently RES + RED + None or RES + RED + R.
