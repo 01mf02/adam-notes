@@ -3,6 +3,88 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-03-06
+----------
+
+As a long-outstanding TODO, I have evaluated the usage of `once_cell`'s
+[`Lazy`](https://docs.rs/once_cell/1.7.2/once_cell/unsync/struct.Lazy.html) type
+to replace my [`lazy_st`](https://docs.rs/lazy-st/0.2.2/lazy_st/) package in
+[Kontroli](https://github.com/01mf02/kontroli-rs).
+I did this because I discovered that the `Lazy` type will be
+integrated into the Rust standard library.
+
+First, I noted that I could not use `Lazy` as
+a drop-in replacement of my current solution,
+due to restrictions of the `FnOnce` trait.
+I documented this in an [issue](https://github.com/matklad/once_cell/issues/143),
+as well as a solution to my problem.
+The solution follows `once_cell`'s `Lazy` type closely;
+only the order of type arguments is swapped and
+the `Into` instead of the `FnOnce` trait is used.
+This allows this new `Lazy` type to be used as
+a drop-in replacement of `lazy_st`'s `Thunk` type.
+It looks as follows:
+
+~~~ rust
+use core::{cell::Cell, ops::Deref};
+use once_cell::unsync::OnceCell;
+
+pub struct Lazy<T, U> {
+    from: Cell<Option<T>>,
+    into: OnceCell<U>,
+}
+
+impl<T, U> Lazy<T, U> {
+    /// Create a new lazy value with the given initial value.
+    pub const fn new(from: T) -> Self {
+        Lazy {
+            from: Cell::new(Some(from)),
+            into: OnceCell::new(),
+        }
+    }
+}
+
+impl<T: Into<U>, U> Lazy<T, U> {
+    /// Force the evaluation of the lazy value and
+    /// return a reference to the result.
+    ///
+    /// This is equivalent to the `Deref` impl, but is explicit.
+    pub fn force(&self) -> &U {
+        self.into.get_or_init(|| match self.from.take() {
+            Some(from) => from.into(),
+            None => panic!("Lazy instance has previously been poisoned"),
+        })
+    }
+}
+
+impl<T: Into<U>, U> Deref for Lazy<T, U> {
+    type Target = U;
+    fn deref(&self) -> &U {
+        self.force()
+    }
+}
+~~~
+
+I evaluated Kontroli using:
+
+    cat examples/bool.dk examples/sudoku/sudoku.dk examples/sudoku/solve_easy.dk | kocheck -
+
+Before (using `lazy_st`'s `Thunk`):
+
+    Time (mean ± σ):     690.2 ms ±   2.3 ms    [User: 659.7 ms, System: 31.4 ms]
+    Range (min … max):   686.5 ms … 693.7 ms    10 runs
+
+After (using my custom `Lazy` type based on `once_cell`):
+
+    Time (mean ± σ):     717.2 ms ±   4.2 ms    [User: 683.7 ms, System: 34.4 ms]
+    Range (min … max):   710.3 ms … 723.0 ms    10 runs
+
+So using the `Lazy` type based on `once_cell` decreases performance.
+This could be because its implementation contains two cells, whereas
+`lazy_st`'s `Thunk` contains just a single cell.
+Conclusion: I will stick with `lazy_st` for the time being.
+
+
 2021-02-26
 ----------
 
