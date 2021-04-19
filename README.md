@@ -3,6 +3,140 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-04-17
+----------
+
+I spent quite some time recently on generating statistics for each proof
+in which steps that are REI/REX compatible are marked.
+The idea is that if a proof contains only REX compatible proof steps,
+then REX should be able to find that proof.
+However, to this date, I have not been able to make it work correctly. :(
+In particular, identifying REX compatible steps is terribly tricky ...
+The simplest TPTP problem that my statistics identify as REX compatible,
+but which REX actually cannot solve, is `PUZ031+1.p`
+(as well as its `+2` and `+3` counterparts).
+REI is simpler, but even there, there are a few problems that are not
+correctly classified, such as the Miz40 problem `t30_trees_3.p`.
+
+So I have opted (for now) for a simpler solution:
+Whenever REX/REI find a proof that is completely identical to
+a proof found by the complete strategy,
+we know that the complete strategy used only REX/REI compatible proof steps.
+This solution unfortunately does not allow an analysis of individual proof steps,
+but it still provides interesting insights.
+The results are:
+
+| Dataset                         |    bushy |   chainy | flyspeck-top | miz40-deps.a15 | TPTP-v6.3.0 |
+| ------------------------------- | -------: | -------: | -----------: | -------------: | ----------: |
+| COMP proofs                     |      546 |      208 |         4038 |           9236 |        1711 |
+| REX proofs in COMP              |      363 |      186 |         3272 |           7183 |        1443 |
+| REI proofs in COMP              |      255 |      120 |         2723 |           5003 |        1175 |
+| REX proofs                      |      850 |      294 |         4994 |          16134 |        2102 |
+| REI proofs in REX               |      347 |      174 |         3326 |           8083 |        1339 |
+| COMP infs for COMP & REX proofs | 45399093 | 21064243 |    503063533 |     1352758570 |   135693802 |
+| REX infs for COMP & REX proofs  |  1210051 |  2108849 |     25430077 |       35639209 |    30412235 |
+| COMP infs for COMP & REI proofs |  7148403 |  8754173 |    352551327 |      692280513 |    60448738 |
+| REI infs for COMP & REI proofs  |   128641 |   272841 |     12247254 |       12781751 |    14193952 |
+| REX infs for REX & REI proofs   | 36022528 | 14060149 |    594990240 |     2635362677 |   141348317 |
+| REI infs for REX & REI proofs   |  8670913 |  1681341 |    267973213 |     1092512767 |    42204117 |
+
+
+2021-04-08
+----------
+
+To speed up the reevaluation of solved problems,
+I added a mode to the evaluation which only evaluates problems solved.
+I use it like this:
+
+~~~
+SETS={bushy,chainy,TPTP-v6.3.0,miz40-deps.a15,flyspeck-top}
+CFGS=meancop--conj{,--cuts{ei,ex},--cutsr{,ei,ex}}
+eval make USE_SOLVED=1 o/$SETS/{1,10}s/$CFGS -j40
+eval make -f solved.mk solved/$SETS/{1,10}s/$CFGS
+~~~
+
+
+2021-04-07
+----------
+
+Long time, no write. How have you been?
+
+I wrote a rebuttal for my CADE article and started to realise my proposed changes.
+The most complex change involves collecting proof step statistics in meanCoP.
+For this, I now collect statistics for every proof step about
+the backtracking that was involved to find it.
+I took this as an opportunity to also allow for
+easier analysis of the number of inferences.
+
+To demonstrate the new statistics, I analyse the bushy problems
+solved by the complete meanCoP strategy in 10 seconds.
+
+Total number of solved problems (same as `cat *.p | wc -l`):
+
+    cat *.p | jaq -s 'length'
+    546
+
+Total number of inferences for all solved problems:
+
+    cat *.p | jaq -s '[.[].infs | add] | add'
+    122387404
+
+Total number of inferences spent in the highest depth:
+
+    cat *.p | jaq -s '[.[].infs[-1]] | add'
+    99389423
+
+Average depth at which a proof is found:
+
+    cat *.p | jaq -s '[.[].infs | length] | add / length'
+    3.835
+
+Total number of proof steps:
+
+    cat *.p | jaq -s '[.[].branches.closed] | add'
+    9697
+
+Total number of proof steps that require
+a change of the root / a change below the root
+(**NOTE: all numbers from here on have to be considered wrong**):
+
+    cat *.p | jaq -s '[.[].branches.root_changed] | add'
+    745
+    cat *.p | jaq -s '[.[].branches.descendant_changed] | add'
+    228
+
+This is quite cool; it shows that about 3/4 of all backtracking
+involves only root changes, but no backtracking below.
+Read the other way around, one can catch 3/4 of the beneficial backtracking
+by just allowing a change of root steps.
+
+Total number of proof steps that could be found by REX / REI:
+
+    jaq -s '[.[].branches | .closed - .descendant_changed] | add'
+    jaq -s '[.[].branches | .closed - .root_changed] | add'
+
+Total number of proofs requiring no root / descendant changes:
+
+    cat *.p | jaq -s '[.[].branches | select(.root_changed == 0)] | length'
+    254
+    cat *.p | jaq -s '[.[].branches | select(.descendant_changed == 0)] | length'
+    399
+
+The first and second number shows how many of the found proofs we would have found
+if we had forbade all non-essential backtracking / only descendant backtracking.
+Forbidding all backtracking loses about half of the proofs, whereas
+only forbidding descendant backtracking loses only one fourth of the proofs.
+That means that restricted backtracking (EI) loses much more proofs than EX.
+
+Total number of proofs requiring neither root nor descendant changes:
+
+    cat *.p | jaq -s '[.[].branches | select(.root_changed == 0 and .descendant_changed == 0)] | length'
+    254
+
+So whenever there is a descendant changed, there is also some root changed.
+That is OK, because the changed descendant is also some root.
+
+
 2021-03-06
 ----------
 
