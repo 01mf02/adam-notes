@@ -3,6 +3,103 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-04-28
+----------
+
+I wanted to combine several lines of a table and divide the ratios of the cells.
+For this, I first converted the tables from Markdown to JSON via <https://tableconvert.com>.
+Then, I used commands such as the following to obtain a Markdown table of ratios:
+
+    jq '[[.[3][]], [.[4][]]] | transpose | .[2:][] | .[1] / .[0] | . * 1000 | round | . / 10' | paste -sd '|'
+
+The `transpose` filter is a clever generalisation of a `zip` function
+that zips an arbitrary number of arrays (given themselves as an array).
+
+Speaking of filters, I implemented user-defined filters in jaq.
+This allows for the definition of filters such as:
+
+    def transpose: [{ i: range([.[] | length] | max), a: . } | [.a[][.i]]];
+
+This functionality allowed me to define 38 jq filters in very short time,
+some of these replacing previously built-in filters.
+
+The `round` filter is not yet implemented in jaq (which is why I use jq here),
+but it is a natural candidate for being implemented soon.
+
+
+2021-04-27
+----------
+
+For several datasets and provers, I wanted to obtain the cumulative time that
+the prover takes to solve the problems solved by leanCoP.
+
+Time for leanCoP:
+
+    for s in bushy chainy flyspeck-top miz40-deps.a15 tptp630; do
+    for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj`; do
+    cat cop/eval/out/$s/jar/plleancop-171116-nodef-cut-conj/$i.time | grep "user" | cut -d "u" -f 1;
+    done | jaq -s 'add';
+    done
+    for s in tptp630; do
+    for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj | sed 's|\(...\)|\1/\1|'`; do
+    cat cop/eval/out/$s/jar/plleancop-171116-nodef-cut-conj/$i.time | grep "user" | cut -d "u" -f 1;
+    done | jaq -s 'add';
+    done
+    461.899999999999
+    319.0799999999998
+    2451.5799999999967
+    9308.689999999799
+    1299.6700000000035
+
+Time for fleanCoP:
+
+    for s in bushy chainy flyspeck-top miz40-deps.a15 tptp630; do
+    for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj`; do
+    cat cop/eval/out/$s/jar/streamcop-171126-nodef-cut-conj/$i.time | grep "user" | cut -d "u" -f 1;
+    done | jaq -s 'add';
+    done
+    for s in tptp630; do
+    for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj | sed 's|\(...\)|\1/\1|'`; do
+    cat cop/eval/out/$s/jar/streamcop-171126-nodef-cut-conj/$i.time | grep "user" | cut -d "u" -f 1;
+    done | jaq -s 'add';
+    done
+    190.86000000000016
+    69.84000000000002
+    657.1599999999828
+    3845.620000000096
+    488.10999999999746
+
+Time for meanCoP:
+
+    for s in bushy chainy flyspeck-top miz40-deps.a15; do
+    for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj`; do
+    cat cop-rs/eval/o/$s/10s/meancop--conj--cutsrei/$i.time;
+    done | jaq -s '[.[].user] | add';
+    done
+    for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj | sed 's|\(...\)|Problems/\1/\1|'`; do
+    cat cop-rs/eval/o/TPTP-v6.3.0/10s/meancop--conj--cutsrei/$i.time;
+    done | jaq -s '[.[].user] | add'
+    18.570000000000004
+    19.73999999999997
+    111.69000000000116
+    393.4499999999931
+    337.8099999999979
+
+To round the numbers and to show them in a table-like format:
+
+    for i in $(jq '. * 10 | round | . / 10'); do echo -n "| "$i; done
+
+The final result, after some hand-formatting:
+
+| Dataset      |   TPTP | bushy | chainy |  Miz40 | FS-top |
+| -----------: | -----: | ----: | -----: | -----: | -----: |
+|  leanCoP-REI | 1299.7 | 461.9 |  319.1 | 9308.7 | 2451.6 |
+| fleanCoP-REI |  488.1 | 190.9 |   69.8 | 3845.6 |  657.2 |
+|  meanCoP-REI |  337.8 |  18.6 |   19.7 |  393.4 |  111.7 |
+
+This shows that meanCoP is vastly faster than both fleanCoP and leanCoP.
+
+
 2021-04-17
 ----------
 
