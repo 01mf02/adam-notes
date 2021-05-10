@@ -3,6 +3,43 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-05-10
+----------
+
+I compared the number of inferences between leanCoP and meanCoP on several datasets:
+
+    SETS="bushy chainy flyspeck-top miz40-deps.a15"
+    for s in $SETS; do
+      echo $s
+      for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj`; do
+        echo $i $(grep "Inf:" cop/eval/out/$s/jar/plleancop-171116-nodef-cut-conj/$i | cut -d " " -f 2);
+      done > $s-plleancop.infs
+      for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj`; do
+        echo $i $(cat cop-rs/eval/o/$s/10s/meancop--conj--cutsrei/$i.stats | jaq '.infs | add');
+      done > $s-meancop.infs
+      diff -s $s-plleancop.infs $s-meancop.infs
+    done
+
+I noted a few problems in the flyspeck-top dataset that
+were solved with differing numbers of inferences.
+I found out that this was due to leanCoP's special handling of
+symbols that are called `all` or `ex`.
+I recalled that I had already
+[found that behaviour during my PhD](https://github.com/01mf02/notes#leancop--nanocop-bugs),
+but so far, the fix that Jens sent me at the time has not made it into the official leanCoP.
+So here is the fix. It replaces the `univar` predicate in `def_mm.pl` with:
+
+~~~ prolog
+univar(X,_,X)  :- (atomic(X);var(X);X==[[]]), !.
+univar(F,Q,F1) :-
+     F=..[A,B|T], ( (A=ex;A=all),B=(X:C) -> delete2(Q,X,Q1),
+     copy_term((X,C,Q1),(Y,D,Q1)), univar(D,[Y|Q],D1), F1=..[A,Y:D1] ;
+     univar(B,Q,B1), univar(T,Q,T1), F1=..[A,B1|T1] ).
+~~~
+
+Apart from this, there are no diverging problems any more! :)
+
+
 2021-05-07
 ----------
 
@@ -10,9 +47,10 @@ I found out that meanCoP cannot solve a few problems that leanCoP can solve.
 These are all part of TPTP's `CSR` category (example: `CSR085+1`)
 and consist of a large number of axioms.
 During preprocessing, there is a stack overflow due to the structure of the
-formula data type, which stores the conjunctions of these axioms à la
-`Cj(a1, Cj(..., an)...)`.
-As remedy, I introduced an array-based conjunction/disjunction in meanCoP.
+formula data type, which stores the conjunctions of these axioms
+à la `Cj(a1, Cj(..., an)...)`.
+As remedy, I introduced an array-based conjunction/disjunction in meanCoP
+à la `Cj([a1, ... ,an])`.
 This solved the stack overflow, but it required significant effort
 to exactly reproduce the preprocessing of leanCoP again.
 The formula ordering by paths and the conversion to CNF
