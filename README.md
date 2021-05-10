@@ -3,6 +3,29 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-05-07
+----------
+
+I found out that meanCoP cannot solve a few problems that leanCoP can solve.
+These are all part of TPTP's `CSR` category (example: `CSR085+1`)
+and consist of a large number of axioms.
+During preprocessing, there is a stack overflow due to the structure of the
+formula data type, which stores the conjunctions of these axioms à la
+`Cj(a1, Cj(..., an)...)`.
+As remedy, I introduced an array-based conjunction/disjunction in meanCoP.
+This solved the stack overflow, but it required significant effort
+to exactly reproduce the preprocessing of leanCoP again.
+The formula ordering by paths and the conversion to CNF
+were particularly nasty, taking me nearly one week.
+While doing this work, I also discovered and eliminated
+a small bug in my implementation of the regularity check,
+which did not impact soundness, but sometimes caused unnecessary inferences.
+Now the number of inferences of meanCoP on TPTP problems
+perfectly matches those of leanCoP.
+This is important for the soundness of the evaluation and
+prepares the ground for me attacking a first prototype of nanoCoP in Rust.
+
+
 2021-04-28
 ----------
 
