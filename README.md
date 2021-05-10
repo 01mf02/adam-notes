@@ -100,6 +100,26 @@ The final result, after some hand-formatting:
 This shows that meanCoP is vastly faster than both fleanCoP and leanCoP.
 
 
+2021-04-24
+----------
+
+I wanted to highlight a number in a LaTeX table with bold letters.
+However, the boldfaced numbers were larger than the other numbers,
+rendering the table ugly.
+I found out that the culprit was the combination of
+the `lmodern` package with the `llncs` document class:
+The `llncs` class makes the content of tables `\small`.
+The `lmodern` package, however, does not seem to define an adequate font for
+characters that are small *and* boldfaced at the same time,
+resulting in the size mismatch mentioned.
+My solution was to not load the `lmodern` package,
+which I only used for providing a less "grainy" font than the default font.
+Instead, I discovered that by installing the `cm-super` package,
+the default font is replaced with a less "grainy" version.
+This does not require loading any packages in LaTeX documents
+and is thus clearly preferable to using `lmodern`.
+
+
 2021-04-17
 ----------
 
