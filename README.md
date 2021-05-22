@@ -3,6 +3,34 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-05-12
+----------
+
+I reran the evaluation with the new meanCoP version.
+After this, I noted that the new version was not able to prove
+several problems within the timeout of ten seconds.
+I obtained these problems via (ran inside `eval/solved`):
+
+    for i in */10s/*; do echo $i; comm -13 $i ../solved.old/$i; done
+
+As a result, I reran the evaluation for all those problems that were lost.
+For this, I deleted the output of the lost files and
+combined from the previous solved files a new set of solved files:
+
+    for i in */10s/*; do for p in `comm -13 $i ../solved.old/$i`; do rm ../o/$i/$p; done; done
+    for i in */10s/*; do cat $i ../solved.old/$i | sort > ../solved.merge/$i ; done
+
+I then reran the evaluation without timeout [as described before](#2021-04-08).
+This resulted in all previously lost problems being solved.
+Only 15 problems (out of several hundreds of thousands evaluated)
+surpassed a time limit of 15 seconds, as shown by:
+
+    for i in */10s/*; do for p in `comm -13 $i ../solved.old/$i`; do
+    jaq '.user | select(. > 15)' < ../o/$i/$p.time; done; done | wc -l
+
+However, all previously lost problems were solved in less than 20 seconds.
+
+
 2021-05-10
 ----------
 
@@ -137,9 +165,11 @@ Time for meanCoP:
     cat cop-rs/eval/o/$s/10s/meancop--conj--cutsrei/$i.time;
     done | jaq -s '[.[].user] | add';
     done
+    for s in tptp630; do
     for i in `cat cop/eval/solved/$s/jar/plleancop-171116-nodef-cut-conj | sed 's|\(...\)|Problems/\1/\1|'`; do
     cat cop-rs/eval/o/TPTP-v6.3.0/10s/meancop--conj--cutsrei/$i.time;
-    done | jaq -s '[.[].user] | add'
+    done | jaq -s '[.[].user] | add';
+    done
     18.570000000000004
     19.73999999999997
     111.69000000000116
