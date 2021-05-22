@@ -3,10 +3,32 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-05-22
+----------
+
+I have worked on releasing a first release of jaq, my jq clone.
+This release is now 100% `todo!()`-free. :)
+This implied mainly implementing optional path operations, such as
+`.a?`, `.[]?`, and `.[i:j]?`.
+
+
+2021-05-15
+----------
+
+I created scripts in the `eval` directory of meanCoP that semi-automate the
+analysis of evaluation results (in particular generating tables and plots).
+This should make it much easier for somebody else than me (or my future me ^^)
+to reproduce the tables/plots featured in my TABLEAUX paper.
+
+Using these scripts, I updated the data in the TABLEAUX paper.
+The number of solved problems changed mostly for TPTP, where
+REX solves 2102 problems before and 2126 after the `Vec` change (+1.1%).
+
+
 2021-05-12
 ----------
 
-I reran the evaluation with the new meanCoP version.
+I reran the evaluation with the new meanCoP, featuring `Vec`-based formulas.
 After this, I noted that the new version was not able to prove
 several problems within the timeout of ten seconds.
 I obtained these problems via (ran inside `eval/solved`):
