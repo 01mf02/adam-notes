@@ -3,6 +3,111 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-06-01
+----------
+
+Given that my work on meanCoP is now mostly completed,
+I remembered that I have still a paper sitting around that was rejected at CPP last year.
+So I decided that I will finish this before attacking nanoCoP.
+I finally mustered all my courage and looked at the reviews (nearly six months later!).
+I agree with them, the submitted version is quite technical,
+and it would be better to concentrate on "the meat", as one reviewer called it.
+After having re-read the paper, I wondered about
+the relative parsing performance between Dedukti and Kontroli.
+
+Parsing is heavily intertwined with scoping in Dedukti.
+However, I found out that scoping in Dedukti
+means something different than in Kontroli:
+In both cases, scoping distinguishes
+bound variables (such as `x` in a lambda abstraction `x => x`) from
+unbound symbols (such as `c` that is not in the scope of some `c => t`).
+The difference is that scoping in `dkcheck` does *not* check
+whether a symbol `c` has actually been defined before.
+To see this, it suffices to run `dkcheck` with the `--beautify` flag,
+which parses and scopes, but does not check:
+
+    echo "a: c." | dkcheck --beautify --stdin mod
+
+Here, `dkcheck` does not complain, whereas the following invocation of
+`kocheck`, which parses and scopes, does:
+
+    echo "a: c." | kocheck --no-check -
+
+This makes it difficult to compare the parsing performance of Kontroli and Dedukti.
+
+Despite this, it seems that `kocheck --no-check` is faster than `dkcheck --beautify`,
+even if Kontroli's scoping performs more work.
+For this experiment, I replaced in `api/processor.ml` the `handle_entry` function
+in `MakeEntryPrinter` by:
+
+~~~ ocaml
+  let handle_entry env e =
+    let (module Pp:Pp.Printer) = (module Pp.Make(struct let get_name () = Env.get_name env end)) in
+    (* Pp.print_entry Format.std_formatter e *)
+    ()
+~~~
+
+This disables the pretty printing of the theory, leaving only parsing and scoping.
+I used the most recent Kontroli and Dedukti versions from GitHub at the time of writing.
+`hyperfine` yields the following timings on `colo12`:
+
+~~~
+Benchmark #1: kontroli-rs/target/release/kocheck isabelle_hol/isaexport.dk --buffer 512MB --no-check
+  Time (mean ± σ):     449.624 s ±  2.975 s    [User: 444.926 s, System: 4.496 s]
+  Range (min … max):   447.520 s … 451.728 s    2 runs
+
+Benchmark #1: ./dkcheck.native ~/isabelle_hol/isaexport.dk --beautify
+  Time (mean ± σ):     533.667 s ±  5.084 s    [User: 529.605 s, System: 3.916 s]
+  Range (min … max):   530.071 s … 537.262 s    2 runs
+~~~
+
+This shows that `kocheck` takes about 16% less time than `dkcheck` to
+parse the Dedukti export of Isabelle's `HOL.List` theory.
+
+The Dedukti results for `matita_sttfa`:
+
+~~~
+Benchmark #1: dkcheck --beautify *.dk
+  Time (mean ± σ):     176.0 ms ±   2.5 ms    [User: 170.2 ms, System: 5.8 ms]
+  Range (min … max):   173.2 ms … 183.9 ms    16 runs
+
+Benchmark #1: make dedukti
+  Time (mean ± σ):     772.9 ms ±  12.6 ms    [User: 692.0 ms, System: 79.7 ms]
+  Range (min … max):   747.6 ms … 788.4 ms    10 runs
+
+~~~
+
+And for Kontroli:
+
+~~~
+Benchmark #1: KOFLAGS=--no-scope make kontroli
+  Time (mean ± σ):     145.8 ms ±   3.3 ms    [User: 138.0 ms, System: 10.1 ms]
+  Range (min … max):   140.9 ms … 153.8 ms    20 runs
+
+Benchmark #1: KOFLAGS=--no-check make kontroli
+  Time (mean ± σ):     237.7 ms ±   6.7 ms    [User: 224.9 ms, System: 15.1 ms]
+  Range (min … max):   221.8 ms … 245.6 ms    13 runs
+
+Benchmark #1: make kontroli
+  Time (mean ± σ):     585.1 ms ±   7.5 ms    [User: 574.2 ms, System: 13.1 ms]
+  Range (min … max):   573.4 ms … 597.7 ms    10 runs
+~~~
+
+We can see that Kontroli is overall faster than Dedukti, and that
+ Dedukti's performance for parsing+scoping is between
+Kontroli's performance for parsing and parsing+scoping.
+
+
+2021-05-29
+----------
+
+I have worked on making meanCoP more modular,
+by moving preprocessing and parsing code to its support library.
+Furthermore, I have added CNF support.
+Both changes should benefit the future nanoCoP implementation
+as well as the web interface that is currently in development.
+
+
 2021-05-22
 ----------
 
