@@ -3,6 +3,75 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-06-13
+----------
+
+Several reviewers for my CPP paper criticised that
+the performance gains by my proof checker Kontroli were
+decent, but not exceptional.
+I may just have found a way to change that.
+
+My CPP evaluation showed that surprisingly,
+the largest bottleneck during proof checking of large developments
+(Isabelle/HOL, HOL Light) is parsing, not the actual checking itself.
+For example, on my home computer, Kontroli takes 188 seconds
+only to parse the Isabelle/HOL dataset, which is about 2.4GB large:
+
+~~~
+Benchmark #1: kocheck --buffer 512MB isaexport.dk --no-scope
+  Time (mean ± σ):     187.562 s ±  2.194 s    [User: 181.851 s, System: 4.831 s]
+  Range (min … max):   186.011 s … 189.113 s    2 runs
+~~~
+
+I created a new parser for the Dedukti format.
+It is divided into a parser and a lexer,
+unlike Kontroli's parser, whose parser lexes at the same time.
+I realised that having a separate lexer allows me to parallelise parsing,
+using Rust's Rayon crate.
+
+The lexer is implemented using the [Logos](https://docs.rs/logos/) crate,
+which made it possible to write the lexer (about 50 lines of code) in a single day.
+The Logos crate lives up to its claim to create "ridiculously fast" lexers,
+because lexing the Isabelle/HOL dataset with it takes only about 12 seconds
+(including loading the file)!
+One technique significantly reduced the lexing time:
+In the tokens, save only references to the input string (`&str`)
+instead of owned strings (`String`).
+
+The parser currently only parses terms.
+Still, we can already estimate its performance on the Isabelle/HOL dataset,
+by just parsing the parts of commands after definitions (":=").
+This parses all proof terms, which make up for the largest amount of the data.
+The time (including file loading, lexing and parsing) is:
+
+~~~
+Benchmark #1: Single-threaded
+  Time (mean ± σ):     58.668 s ±  1.327 s    [User: 49.299 s, System: 8.082 s]
+  Range (min … max):   57.730 s … 59.606 s    2 runs
+
+Benchmark #2: Multi-threaded, 2 threads
+  Time (mean ± σ):     38.729 s ±  0.477 s    [User: 56.543 s, System: 12.088 s]
+  Range (min … max):   38.391 s … 39.066 s    2 runs
+
+Benchmark #3: Multi-threaded, 3 threads
+  Time (mean ± σ):     37.611 s ±  0.534 s    [User: 78.632 s, System: 19.701 s]
+  Range (min … max):   37.233 s … 37.989 s    2 runs
+~~~
+
+The results are amazing.
+Going down from 188 seconds for the current parser to only 59 seconds
+would be already cool enough (more than three times as fast!),
+but it also looks like parallel parsing scales quite well,
+reducing time further to 39 seconds at two threads.
+For three threads, the performance gains are much smaller,
+but this might be due to my computer having only two cores.
+(And I have still not optimised the parser.
+This is the very first version that is able to parse all terms.)
+
+The next step will be two extend the parser to Dedukti *commands*
+and to integrate it into Kontroli.
+
+
 2021-06-01
 ----------
 
