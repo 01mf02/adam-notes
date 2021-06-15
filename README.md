@@ -3,6 +3,28 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-06-15
+----------
+
+I now implemented a parser for Dedukti commands,
+which took me only about two hours!
+This parser supports parsing to commands containing either `&str` or `String`,
+in case the second should become necessary at some point
+(concurrency, I'm looking at you).
+Interestingly, parsing all of Isabelle/HOL with that parser
+is about 1.5 seconds *faster* than my [previous experiment](#2021-06-13),
+where I parsed only proof terms:
+
+~~~
+Benchmark #1: Single-threaded (full commands)
+  Time (mean ± σ):     57.049 s ±  1.295 s    [User: 48.685 s, System: 7.652 s]
+  Range (min … max):   55.905 s … 59.543 s    10 runs
+~~~
+
+The next task will be to integrate this parser into Kontroli, and to see
+whether multi-threaded parsing can be used without conversion to `String`.
+
+
 2021-06-13
 ----------
 
