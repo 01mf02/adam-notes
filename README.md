@@ -3,6 +3,90 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-07-02
+----------
+
+The name for this notebook is now outdated.
+I moved to Austria on the 30th of June.
+Greetings from the sunny mountains! :)
+
+Since [my last post](#2021-06-15), I worked on
+integrating my new Dedukti parser into Kontroli.
+While doing this, I realised that what I previously called "scoping"
+could be split into a scoping and a sharing operation, where
+scoping separates symbols into constants and variables, and
+sharing maps equal constants to equal pointers.
+This allows us to compare the parsing speed of Dedukti and Kontroli,
+because parsing in Dedukti always includes scoping (but not sharing).
+More importantly, because this makes scoping a pure, fail-safe operation,
+we can execute it in parallel after parsing!
+
+In the new scheme of scoping and sharing, it makes sense for the parser to
+always output data structures containing `&str` (as opposed to `String`),
+because this allows us to duplicate strings in constant time during scoping,
+for example when we add a variable name to the stack of bound variables.
+
+I implemented a single-threaded version of `kocheck` that uses the new parser.
+I call this program `kocheck2` and evaluate it below on the
+HOL Light export of `lists.ml` using Theory U (weighing 98MB).
+I performed all evaluations in this post with my ThinkPad X230.
+
+~~~
+Benchmark #1: make clean && make lists.dko
+  Time (mean ± σ):     28.508 s ±  0.107 s    [User: 27.402 s, System: 1.102 s]
+  Range (min … max):   28.442 s … 28.631 s    3 runs
+
+Benchmark #2: make clean && make KOCHECK=../target/release/kocheck lists.koo
+  Time (mean ± σ):     28.129 s ±  0.241 s    [User: 27.478 s, System: 0.623 s]
+  Range (min … max):   27.950 s … 28.403 s    3 runs
+
+Benchmark #3: make clean && make KOCHECK=../target/release/kocheck2 lists.koo
+  Time (mean ± σ):     22.200 s ±  0.090 s    [User: 21.887 s, System: 0.313 s]
+  Range (min … max):   22.096 s … 22.255 s    3 runs
+~~~
+
+Benchmark #1 is Dedukti, #2 the old `kocheck`, and #3 the new `kocheck2`.
+Everything is run using a single thread.
+This shows that while Dedukti and the old `kocheck` are about equally fast,
+the new `kocheck2` takes only 77.9% of the time that Dedukti takes.
+This is a very nice result.
+
+I now measure the performance of several stages of the new parser; first
+only lexing,
+then lexing & parsing, and
+then lexing & parsing & scoping.
+Finally, I evaluate Dedukti's lexing & parsing & scoping,
+using [the `--beautify` trick](#2021-06-01).
+
+~~~
+Benchmark #1: make KOCHECK=../target/release/kocheck2 KOFLAGS=--no-parse lists.koo
+  Time (mean ± σ):     606.7 ms ±   8.3 ms    [User: 558.8 ms, System: 49.9 ms]
+  Range (min … max):   598.6 ms … 617.6 ms    4 runs
+
+Benchmark #1: make KOCHECK=../target/release/kocheck2 KOFLAGS=--no-scope lists.koo
+  Time (mean ± σ):      1.728 s ±  0.015 s    [User: 1.667 s, System: 0.063 s]
+  Range (min … max):    1.712 s …  1.742 s    3 runs
+
+Benchmark #1: make KOCHECK=../target/release/kocheck2 KOFLAGS=--no-share lists.koo
+  Time (mean ± σ):      2.921 s ±  0.024 s    [User: 2.865 s, System: 0.057 s]
+  Range (min … max):    2.895 s …  2.943 s    3 runs
+
+Benchmark #1: for i in `make --silent -f kontroli.mk -f deps.mk lists.koo`; do dkcheck --beautify $i; done
+  Time (mean ± σ):      6.233 s ±  0.047 s    [User: 6.169 s, System: 0.065 s]
+  Range (min … max):    6.194 s …  6.289 s    5 runs
+~~~
+
+This shows that lexing is the fastest operation of the whole parser,
+which is good news, because it is the only part that cannot be parallelised.
+Furthermore, this shows that Dedukti's parser is
+more than twice as slow than the new parser.
+
+Next, I want to create a `kocheck2` which uses $m + n$ threads, where
+$m$ is the number of parse/scope threads and $n$ is the number of check threads.
+(Previously, this was limited to $m = 1$.)
+This will give rise to a "doubly-parallel" proof checker.
+
+
 2021-06-15
 ----------
 
