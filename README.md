@@ -3,6 +3,34 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-07-12
+----------
+
+After reading [Temporarily opt-in to shared mutation](https://ryhl.io/blog/temporary-shared-mutation/),
+I was curious to see whether I could replace
+occurrences of `RefCell` by `Cell` in Kontroli.
+I hoped for performance benefits, apart from the non-panicking guarantee.
+
+Although I succeeded in replacing `RefCell`, my hope was disappointed.
+`Cell` is slightly slower than `RefCell`, at least on
+HOL Light's `lists.dk` as well as on the Sudoku example:
+
+~~~
+Benchmark #1: make lists.koo (RefCell)
+  Time (mean ± σ):     21.336 s ±  0.123 s    [User: 21.054 s, System: 0.281 s]
+  Range (min … max):   21.203 s … 21.445 s    3 runs
+
+Benchmark #1: make lists.koo (Cell)
+  Time (mean ± σ):     22.492 s ±  0.338 s    [User: 22.022 s, System: 0.343 s]
+  Range (min … max):   22.278 s … 22.882 s    3 runs
+~~~
+
+`Cell` might be slower because to access its contents, we need to
+replace its contents with a default value, then put the original value back.
+
+Conclusion: I'll stay with `RefCell` for the time being.
+
+
 2021-07-02
 ----------
 
