@@ -3,6 +3,185 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-07-30
+----------
+
+This Monday, upon waking up, I suddenly had an idea
+how to improve the term data structure in Kontroli.
+So far, I had closely reproduced the term structure of Dedukti,
+which looks like this:
+
+~~~ ocaml
+type term =
+  | Kind                                  (* Kind *)
+  | Type                                  (* Type *)
+  | DB    of int                          (* deBruijn *)
+  | Const of name                         (* Global variable *)
+  | App   of term * term list             (* f [ a1 ; ... an ] , f not an App *)
+  | Lam   of ident * term option * term   (* Lambda abstraction *)
+  | Pi    of ident * term * term          (* Pi abstraction *)
+~~~
+
+My corresponding take on it in Rust was originally:
+
+~~~ rust
+pub enum Term<C, V, Tm> {
+    Kind,
+    Type,
+    DB(DeBruijn),
+    Const(C),
+    App(Tm, Vec<Tm>),
+    Lam(Arg<V, Option<Tm>>, Tm),
+    Pi(Arg<V, Tm>, Tm),
+}
+~~~
+
+Using the `Tm` parameter, we can create terms that are shared or unshared:
+
+~~~ rust
+/// unshared term
+pub struct BTerm<C, V>(Box<Term<C, V, BTerm>>);
+
+/// shared term
+pub struct RTerm<C, V>(Rc <Term<C, V, RTerm>>);
+~~~
+
+The shown term structure requires us to wrap
+terms such as `Type`, `DB`, and `Const` (in a `Box` or `Rc`)
+even though this does not benefit us, because
+duplicating such values takes constant time
+(as opposed to duplicating `App`, `Lam`, and `Pi`).
+(At least if `C` is instantiated to an appropriate type.)
+The overhead of superfluous wrapping shows
+particularly with more expensive pointer types,
+such as `Arc`, which becomes important when using multiple threads.
+
+For that reason, I refactored the term structure to the following:
+
+~~~ rust
+pub enum Term<C, Tm> {
+    Kind,
+    Type,
+    DB(DeBruijn),
+    Const(C),
+    Comb(Tm),
+}
+
+/// Combinator term.
+pub enum TermC<V, Tm> {
+    App(Tm, Vec<Tm>),
+    Lam(Arg<V, Tm>, Tm),
+    Pi(Arg<V, Option<Tm>>, Tm),
+}
+~~~
+
+This allows us to instantiate terms as follows:
+
+~~~ rust
+pub type BTerm<C, V> = Term<C, BTermC<C, V>>;
+pub type RTerm<C, V> = Term<C, RTermC<C, V>>;
+
+pub struct BTermC<C, V>(Box<TermC<V, BTerm<C, V>>>);
+pub struct RTermC<C, V>(Rc <TermC<V, RTerm<C, V>>>);
+~~~
+
+This makes the representation of atomic terms more compact;
+what was `Rc::new(Term::Type)` in the old representation,
+becomes just `Term::Type`.
+However, it increases the representation of combinator terms;
+what was `Rc::new(Term::App(tm, args))` before,
+is now `Term::Comb(Rc::new(TermC::App(tm, args)))`.
+
+I have benchmarked the effects of this change on datasets exported from
+Isabelle/HOL, Matita, and HOL Light.
+The new term structure is faster or equally fast in single-threaded mode,
+and in multi-threaded mode, it is significantly faster.
+We gain more performance in multi-threaded mode because
+`Arc` is more costly than `Rc`, so
+omitting instances of `Arc` pays off more than
+omitting instances of `Rc`.
+
+The evaluation results follow.
+`kocheck` denotes the published version 0.2.0, and
+`target/release/kocheck` is the development version using the new terms.
+
+For Matita (STTfa):
+
+~~~
+$ hyperfine -w 1 -L ko kocheck,../../target/release/kocheck -L flags ,-j2 "make KOCHECK={ko} KOFLAGS={flags} kontroli"
+Benchmark #1: make KOCHECK=kocheck KOFLAGS= kontroli
+  Time (mean ± σ):     456.0 ms ±   4.8 ms    [User: 442.5 ms, System: 15.8 ms]
+  Range (min … max):   449.9 ms … 464.3 ms    10 runs
+ 
+Benchmark #2: make KOCHECK=../../target/release/kocheck KOFLAGS= kontroli
+  Time (mean ± σ):     458.5 ms ±   5.9 ms    [User: 447.4 ms, System: 13.4 ms]
+  Range (min … max):   450.9 ms … 466.5 ms    10 runs
+ 
+Benchmark #3: make KOCHECK=kocheck KOFLAGS=-j2 kontroli
+  Time (mean ± σ):     400.5 ms ±  12.0 ms    [User: 622.0 ms, System: 26.9 ms]
+  Range (min … max):   387.2 ms … 421.3 ms    10 runs
+ 
+Benchmark #4: make KOCHECK=../../target/release/kocheck KOFLAGS=-j2 kontroli
+  Time (mean ± σ):     344.5 ms ±   8.5 ms    [User: 537.5 ms, System: 21.8 ms]
+  Range (min … max):   339.4 ms … 368.0 ms    10 runs
+~~~
+
+For HOL Light (Theory U):
+
+~~~
+$ hyperfine -w 1 -m 5 -L ko kocheck,../../target/release/kocheck -L flags ,-j2 "make KOCHECK={ko} KOFLAGS={flags} pair.koo"
+Benchmark #1: make KOCHECK=kocheck KOFLAGS= pair.koo
+  Time (mean ± σ):      2.753 s ±  0.009 s    [User: 2.702 s, System: 0.052 s]
+  Range (min … max):    2.744 s …  2.765 s    5 runs
+ 
+Benchmark #2: make KOCHECK=../../target/release/kocheck KOFLAGS= pair.koo
+  Time (mean ± σ):      2.649 s ±  0.016 s    [User: 2.598 s, System: 0.052 s]
+  Range (min … max):    2.627 s …  2.669 s    5 runs
+ 
+Benchmark #3: make KOCHECK=kocheck KOFLAGS=-j2 pair.koo
+  Time (mean ± σ):      2.297 s ±  0.024 s    [User: 4.099 s, System: 0.221 s]
+  Range (min … max):    2.259 s …  2.317 s    5 runs
+ 
+Benchmark #4: make KOCHECK=../../target/release/kocheck KOFLAGS=-j2 pair.koo
+  Time (mean ± σ):      1.986 s ±  0.008 s    [User: 3.544 s, System: 0.197 s]
+  Range (min … max):    1.973 s …  1.992 s    5 runs
+~~~
+
+Isabelle/HOL (the first 20,000 lines):
+
+~~~
+$ hyperfine -w 1 -m 3 -L ko kocheck,../target/release/kocheck -L flags ,-j2 "{ko} {flags} --eta isaexport.20000.dk"
+Benchmark #1: kocheck  --eta isaexport.20000.dk
+  Time (mean ± σ):     25.573 s ±  0.181 s    [User: 25.449 s, System: 0.120 s]
+  Range (min … max):   25.442 s … 25.780 s    3 runs
+ 
+Benchmark #2: ../target/release/kocheck  --eta isaexport.20000.dk
+  Time (mean ± σ):     20.424 s ±  0.069 s    [User: 20.265 s, System: 0.155 s]
+  Range (min … max):   20.356 s … 20.494 s    3 runs
+ 
+Benchmark #3: kocheck -j2 --eta isaexport.20000.dk
+  Time (mean ± σ):     19.589 s ±  0.034 s    [User: 37.627 s, System: 0.811 s]
+  Range (min … max):   19.551 s … 19.615 s    3 runs
+ 
+Benchmark #4: ../target/release/kocheck -j2 --eta isaexport.20000.dk
+  Time (mean ± σ):     13.892 s ±  0.085 s    [User: 26.533 s, System: 0.825 s]
+  Range (min … max):   13.796 s … 13.958 s    3 runs
+~~~
+
+The Isabelle/HOL results are particularly astounding.
+Compare the results with Dedukti:
+
+~~~
+Benchmark #1: dkcheck --eta isaexport.20000.dk
+  Time (mean ± σ):     26.789 s ±  0.110 s    [User: 26.644 s, System: 0.139 s]
+  Range (min … max):   26.692 s … 26.908 s    3 runs
+~~~
+
+Only with this change in term structure,
+we finally get significantly below the runtime of Dedukti.
+Furthermore, the parallel performance has improved enormously.
+
+
 2021-07-12
 ----------
 
