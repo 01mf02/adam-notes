@@ -3,6 +3,101 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-09-06
+----------
+
+I compared the performance of Kontroli compiled with Rust 1.53 and 1.54
+on my local computer (Intel NUC).
+
+Rust 1.53:
+
+~~~
+Benchmark #1: make KOFLAGS="" lists.koo
+  Time (mean ± σ):     31.296 s ±  0.140 s    [User: 30.909 s, System: 0.387 s]
+  Range (min … max):   31.149 s … 31.429 s    3 runs
+
+Benchmark #2: make KOFLAGS="-j2" lists.koo
+  Time (mean ± σ):     22.667 s ±  0.043 s    [User: 41.691 s, System: 1.560 s]
+  Range (min … max):   22.629 s … 22.714 s    3 runs
+~~~
+
+Rust 1.54:
+
+~~~
+Benchmark #1: make KOFLAGS="" lists.koo
+  Time (mean ± σ):     30.654 s ±  0.199 s    [User: 30.227 s, System: 0.428 s]
+  Range (min … max):   30.488 s … 30.875 s    3 runs
+
+Benchmark #2: make KOFLAGS="-j2" lists.koo
+  Time (mean ± σ):     22.569 s ±  0.137 s    [User: 41.521 s, System: 1.551 s]
+  Range (min … max):   22.438 s … 22.711 s    3 runs
+~~~
+
+We see improvements for both single- and multi-threaded versions
+(with larger improvement for the single-threaded version).
+Therefore, I use Rust 1.54 from now on.
+
+I benchmarked Kontroli on a cluster provided by the University of Innsbruck.
+The initial results are quite astounding, because they suggest that
+multi-threaded checking on the cluster has a much lower impact than
+on my local computer.
+
+On the cluster:
+
+~~~
+Benchmark #1: make KOFLAGS="" lists.koo
+  Time (mean ± σ):     18.014 s ±  0.221 s    [User: 17.591 s, System: 0.382 s]
+  Range (min … max):   17.806 s … 18.515 s    10 runs
+
+Benchmark #2: make KOFLAGS="-j2" lists.koo
+  Time (mean ± σ):     15.886 s ±  0.650 s    [User: 27.199 s, System: 1.347 s]
+  Range (min … max):   15.150 s … 17.343 s    10 runs
+~~~
+
+First, we see much larger fluctuations on the cluster.
+Second, while the runtime on my local computer decreases by 26.4%,
+on the cluster it decreases by only 11.8%.
+Why?
+
+I suspected that thread creation overhead might be higher on the cluster.
+That does not seem to be the case: I benchmarked the test code at
+<https://stackoverflow.com/a/27764581>,
+which executes on both cluster and local computer in around 8 seconds.
+
+Anyway, on larger theories, the cluster still seems to yield nice results.
+For example, for HOL Light, using four threads takes about 69% of the single-threaded time,
+while in the Kontroli version evaluated for last year's CPP,
+it took 91% of the time.
+Interestingly, using parallel parsing (option `-c`) makes the checker slower.
+
+~~~
+Benchmark #1: make KOFLAGS="" cart.koo
+  Time (mean ± σ):     226.201 s ±  0.186 s    [User: 221.066 s, System: 4.994 s]
+  Range (min … max):   226.053 s … 226.411 s    3 runs
+
+Benchmark #2: make KOFLAGS="-j2" cart.koo
+  Time (mean ± σ):     195.693 s ±  1.318 s    [User: 335.184 s, System: 15.886 s]
+  Range (min … max):   194.477 s … 197.094 s    3 runs
+
+Benchmark #3: make KOFLAGS="-j3" cart.koo
+  Time (mean ± σ):     165.410 s ±  0.730 s    [User: 377.517 s, System: 45.115 s]
+  Range (min … max):   164.680 s … 166.139 s    3 runs
+
+Benchmark #4: make KOFLAGS="-j4" cart.koo
+  Time (mean ± σ):     157.298 s ±  4.222 s    [User: 440.417 s, System: 85.434 s]
+  Range (min … max):   152.849 s … 161.249 s    3 runs
+
+Benchmark #5: make KOFLAGS="-j5" cart.koo
+  Time (mean ± σ):     152.622 s ±  1.266 s    [User: 501.496 s, System: 129.638 s]
+  Range (min … max):   151.740 s … 154.073 s    3 runs
+
+Benchmark #6: make KOFLAGS="-c -j5" cart.koo
+  Time (mean ± σ):     167.110 s ±  0.540 s    [User: 581.040 s, System: 184.637 s]
+  Range (min … max):   166.501 s … 167.534 s    3 runs
+
+~~~
+
+
 2021-07-30
 ----------
 
