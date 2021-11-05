@@ -3,6 +3,123 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2021-11-05
+----------
+
+The way I currently generate nonclausal beta-clauses is relatively ugly,
+because it involves deep-cloning clauses.
+That is why I studied generating beta-clauses lazily using iterators.
+As test vehicle, I used the clausal version of meanCoP.
+
+I compared three versions that use as iterators:
+
+* `iter.take(1).chain(iter.skip(1))` (cts),
+* `iter.enumerate().filter_map(|x| Some(x.1) })` (efm),
+* `iter.enumerate().filter_map(|x| if x.0 == 10000000000 { None } else { Some(x.1) })` (efm2),
+* `SkipSingle::new(10000000000, iter)` (ss),
+* `iter.skip(0)` (skip),
+* `iter` (bare).
+
+The code for `SkipSingle` is:
+
+~~~ rust
+#[derive(Clone)]
+struct SkipSingle<I> {
+    iter: I,
+    pos: usize,
+    skip: usize,
+}
+
+impl<I> SkipSingle<I> {
+    fn new(skip: usize, iter: I) -> Self {
+        Self {
+            pos: 0, iter, skip,
+        }
+    }
+}
+
+impl<I: Iterator> Iterator for SkipSingle<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos == self.skip {
+            self.pos += 1;
+            self.iter.next();
+            self.next()
+        } else {
+            self.pos += 1;
+            self.iter.next()
+        }
+    }
+}
+~~~
+
+Previously, I always used `Skip<I>`, but only this experience made me realise
+that it was actually superfluous, and I should have been using `I` from the start.
+
+The evaluation results are:
+
+~~~
+$ hyperfine -w 1 -L version cts,efm,efm2,ss,skip,bare -m 5 "target/release/meancop-{version} eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex"
+Benchmark #1: target/release/meancop-cts eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex
+  Time (mean ± σ):      7.820 s ±  0.136 s    [User: 7.819 s, System: 0.001 s]
+  Range (min … max):    7.708 s …  8.053 s    5 runs
+ 
+Benchmark #2: target/release/meancop-efm eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex
+  Time (mean ± σ):      7.377 s ±  0.027 s    [User: 7.373 s, System: 0.002 s]
+  Range (min … max):    7.343 s …  7.409 s    5 runs
+ 
+Benchmark #3: target/release/meancop-efm2 eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex
+  Time (mean ± σ):      7.397 s ±  0.021 s    [User: 7.391 s, System: 0.003 s]
+  Range (min … max):    7.379 s …  7.428 s    5 runs
+ 
+Benchmark #4: target/release/meancop-ss eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex
+  Time (mean ± σ):      7.353 s ±  0.026 s    [User: 7.348 s, System: 0.003 s]
+  Range (min … max):    7.324 s …  7.380 s    5 runs
+ 
+Benchmark #5: target/release/meancop-skip eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex
+  Time (mean ± σ):      7.349 s ±  0.053 s    [User: 7.345 s, System: 0.001 s]
+  Range (min … max):    7.288 s …  7.430 s    5 runs
+ 
+Benchmark #6: target/release/meancop-bare eval/i/bushy/relat_1__t203_relat_1.p --conj --cuts rex
+  Time (mean ± σ):      7.180 s ±  0.075 s    [User: 7.179 s, System: 0.000 s]
+  Range (min … max):    7.097 s …  7.297 s    5 runs
+~~~
+
+The used version of the iterators has a non-negligible impact on performance.
+Especially the cts version is significantly slower than the other versions.
+Using no iterator adaptors (bare) is the fastest,
+but it requires also the most code and the most memory.
+The rank between the variants efm, efm2, ss, varies greatly; in a second evaluation,
+efm2 < efm < ss, whereas in this evaluation,
+ss < efm < efm2.
+It seems that efm2 is a nice compromise between code size and performance.
+
+
+
+2021-09-21
+----------
+
+To obtain `kocheck.string`, I replaced `parse::<&str>` in `kocheck/src/seq.rs`
+by `parse::<String>`.
+
+On the HOL Light dataset on the cluster:
+
+~~~
+Benchmark #1: make -s -C hol_stdlib_u KOCHECK=kocheck KOFLAGS='--omit share' kontroli
+  Time (mean ± σ):     21.299 s ±  0.128 s    [User: 20.009 s, System: 1.235 s]
+  Range (min … max):   21.152 s … 21.385 s    3 runs
+ 
+Benchmark #2: make -s -C hol_stdlib_u KOCHECK=../../kontroli-rs/target/release/kocheck.string KOFLAGS='--omit share' kontroli
+  Time (mean ± σ):     28.352 s ±  0.114 s    [User: 27.195 s, System: 1.112 s]
+  Range (min … max):   28.268 s … 28.481 s    3 runs
+
+Benchmark #3: make -s -C hol_stdlib_u KOCHECK=kocheck KOFLAGS='--omit share -c' kontroli
+  Time (mean ± σ):     96.423 s ±  4.697 s    [User: 113.138 s, System: 35.861 s]
+  Range (min … max):   92.789 s … 101.726 s    3 runs
+~~~
+
+
 2021-09-06
 ----------
 
