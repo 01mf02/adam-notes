@@ -11,7 +11,7 @@ because it involves deep-cloning clauses.
 That is why I studied generating beta-clauses lazily using iterators.
 As test vehicle, I used the clausal version of meanCoP.
 
-I compared three versions that use as iterators:
+I compared six versions that use as iterators:
 
 * `iter.take(1).chain(iter.skip(1))` (cts),
 * `iter.enumerate().filter_map(|x| Some(x.1) })` (efm),
