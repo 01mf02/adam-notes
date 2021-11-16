@@ -37,14 +37,14 @@ I performed the evaluation on the colossus cluster of the University of Innsbruc
 
 Table: Solved bushy problems by meanCoP with 10 seconds timeout.
 
-Conj | Nonclausal | Cuts  | Solved
----- | ---------- | ----- | ------
-     | ✔          |       |    544
-✔    | ✔          |       |    549
-✔    |            |       |    552
-✔    |            | REX   |    850
-✔    | ✔          | REX   |    758
-✔    | ✔          | REXDX |    791
+| Conj | Nonclausal | Cuts  | Solved |
+| ---- | ---------- | ----- | ------ |
+|      | ✔          |       |    544 |
+| ✔    | ✔          |       |    549 |
+| ✔    |            |       |    552 |
+| ✔    |            | REX   |    850 |
+| ✔    | ✔          | REX   |    758 |
+| ✔    | ✔          | REXDX |    791 |
 
 There is hardly a difference in number of solved problems between meanCoP and nonaCoP
 when using cut-free proof search (3 problems more solved by meanCoP).
