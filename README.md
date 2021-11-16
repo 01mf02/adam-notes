@@ -3,6 +3,81 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2011-11-16
+----------
+
+Last Friday, I have finished the implementation of
+my first nonclausal automated theorem prover in Rust! 🎉
+Get it [here](https://github.com/01mf02/cop-rs/).
+
+This nonclausal automated theorem prover is integrated in meanCoP.
+It can be used by passing the `-n` flag to meanCoP.
+For brevity, I will refer to it as *nonaCoP* from now on,
+and by *meanCoP*, I will describe only the clausal version.
+
+nonaCoP is based in spirit on Jens Otten's [nanoCoP](http://leancop.de/nanocop/),
+another nonclausal automated theorem prover.
+However, there are at the moment a few important differences:
+
+* nonaCoP currently only considers one extension clause per contrapositive, whereas
+  nanoCoP backtracks over different extension clauses for the same contrapositive,
+  starting with the smallest.
+  My approach is a kind of MVP of nonclausal proof search,
+  yet I am not aware of any literature describing my approach.
+  My approach resembles clausal proof search with Tseitin's transformation,
+  but I am not completely sure yet about the exact relation between the two.
+* nonaCoP implements a new type of cut, namely cut on decomposition steps.
+  This is a change that can be implemented in nanoCoP easily.
+  I show in the table below that it can improve the number of solved problems by 4.4%.
+
+I evaluated the preliminary result of nonaCoP and compare them with meanCoP,
+which performs roughly the same proof steps as leanCoP.
+I chose as problem dataset the MPTP2078 bushy problems.
+I performed the evaluation on the colossus cluster of the University of Innsbruck.
+
+Table: Solved bushy problems by meanCoP with 10 seconds timeout.
+
+Conj | Nonclausal | Cuts  | Solved
+---- | ---------- | ----- | ------
+     | ✔          |       |    544
+✔    | ✔          |       |    549
+✔    |            |       |    552
+✔    |            | REX   |    850
+✔    | ✔          | REX   |    758
+✔    | ✔          | REXDX |    791
+
+There is hardly a difference in number of solved problems between meanCoP and nonaCoP
+when using cut-free proof search (3 problems more solved by meanCoP).
+However, nonaCoP proves 30 problems that meanCoP could not solve, and
+meanCoP proves 33 problems that nonaCoP could not solve.
+Together, they thus prove 6.0% more problems than meanCoP alone.
+
+On the other hand, when using cuts,
+the current nonaCoP version is not yet en par with meanCoP.
+Using the same configuration (conjecture-directed search, REX cuts),
+meanCoP proves 92 problems more than nonaCoP.
+However, when using exclusive cut on decomposition steps (the "DX" of "REXDX"),
+the advantage of meanCoP shrinks to 59 problems.
+Furthermore, nonaCoP with REXDX cuts proves
+46 problems that meanCoP with REX cannot prove.
+
+Now there are several things to do:
+
+* Find out why meanCoP performs better than nonaCoP.
+  Is it due to raw performance or is there a theoretical reason?
+* Implement backtracking over different extension clauses for the same contrapositive.
+  This also opens the door towards a new extension:
+  nanoCoP, as far as I understand it, restricts
+  extensions into extension clauses on the same path to
+  *maximally one* for each contrapositive, namely the most recently put onto the path.
+  However, studying the reconstruction of connection proofs has convinced me that
+  it makes sense to lift this restriction, allowing extensions into
+  arbitrarily many extension clauses on the same path.
+* Implement different extension clause orders, as already done
+  [during my PhD](https://github.com/01mf02/notes#nanocop-extension-clause-order).
+
+
+
 2021-11-05
 ----------
 
