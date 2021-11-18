@@ -3,6 +3,43 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2011-11-18
+----------
+
+To partially answer the first question from my last post:
+nonaCoP is as fast as meanCoP on CNF problems.
+To measure this, I evaluated meanCoP and nonaCoP on TPTP 6.3.0 problems.
+Within a timeout of 1 second, meanCoP solves 881 and nonaCoP 880 CNF problems,
+both using conjecture-directed search and no cuts.
+To find out how many CNF problems are solved by both together:
+
+    comm \
+      <(cat solved/TPTP-v6.3.0/1s/meancop--conj-n | grep "-") \
+      <(cat solved/TPTP-v6.3.0/1s/meancop--conj   | grep "-") | wc -l
+
+This yields 883 CNF problems, meaning that
+nonaCoP and meanCoP solve the same problems.
+
+On FOF problems, the image looks different:
+meanCoP solves 1576 and nonaCoP only 1554 problems.
+Together, they solve 1650 problems (+4.7% compared to meanCoP).
+That means that not only nonaCoP solves fewer problems in total,
+but it also solves different problems than meanCoP.
+
+My intuition was that the nonclausal proof search should always
+take equally many or fewer inferences than clausal proof search.
+But that does not seem to be the case:
+I found some problems where nonclausal search
+takes *more* inferences than clausal search.
+That might be due to different order of processing clauses.
+
+My goal is now the following:
+Find a way to make nonaCoP always find a proof
+after at most as many inferences as meanCoP.
+Once this is achieved, this should give us
+better means to compare clausal and nonclausal proof search.
+
+
 2011-11-16
 ----------
 
@@ -75,7 +112,6 @@ Now there are several things to do:
   arbitrarily many extension clauses on the same path.
 * Implement different extension clause orders, as already done
   [during my PhD](https://github.com/01mf02/notes#nanocop-extension-clause-order).
-
 
 
 2021-11-05
@@ -169,7 +205,6 @@ The rank between the variants efm, efm2, ss, varies greatly; in a second evaluat
 efm2 < efm < ss, whereas in this evaluation,
 ss < efm < efm2.
 It seems that efm2 is a nice compromise between code size and performance.
-
 
 
 2021-09-21
