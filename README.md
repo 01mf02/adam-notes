@@ -3,7 +3,7 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
-2011-12-07
+2021-12-07
 ----------
 
 To generate the sizes of Dedukti commands:
@@ -26,7 +26,7 @@ the second removes redundant data points:
 Did I mention that I love `awk`? :)
 
 
-2011-11-18
+2021-11-18
 ----------
 
 To partially answer the first question from my last post:
@@ -63,7 +63,7 @@ Once this is achieved, this should give us
 better means to compare clausal and nonclausal proof search.
 
 
-2011-11-16
+2021-11-16
 ----------
 
 Last Friday, I have finished the implementation of
