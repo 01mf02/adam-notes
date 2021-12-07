@@ -3,6 +3,29 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
+2011-12-07
+----------
+
+To generate the sizes of Dedukti commands:
+
+    for i in hol_stdlib_u/*.dk; do kofmt < $i | awk '{print length($0)}'; done > hol.lines
+
+Integrating the data:
+
+    sort -n hol.lines | awk '{print NR " " $1}' > hol.integrated
+
+Compressing the data ---
+the first `awk` command quantises the data,
+the second removes redundant data points:
+
+    cat hol.integrated \
+    | awk '{print $1 " " exp(int(log($2) * 100) / 100)}' \
+    | awk '{a[$2] = $1} END {for (i in a) print a[i] " " i}' \
+    | sort -n
+
+Did I mention that I love `awk`? :)
+
+
 2011-11-18
 ----------
 
