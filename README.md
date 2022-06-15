@@ -51,6 +51,28 @@ No idea why. (I made one warm-up run with `-w1`.)
 So for now, I stay with the automatically derived `Eq`.
 
 
+2021-12-07
+----------
+
+To generate the sizes of Dedukti commands:
+
+    for i in hol_stdlib_u/*.dk; do kofmt < $i | awk '{print length($0)}'; done > hol.lines
+
+Integrating the data:
+
+    sort -n hol.lines | awk '{print NR " " $1}' > hol.integrated
+
+Compressing the data ---
+the first `awk` command quantises the data,
+the second removes redundant data points:
+
+    cat hol.integrated \
+    | awk '{print $1 " " exp(int(log($2) * 100) / 100)}' \
+    | awk '{a[$2] = $1} END {for (i in a) print a[i] " " i}' \
+    | sort -n
+
+Did I mention that I love `awk`? :)
+
 
 2021-11-18
 ----------
