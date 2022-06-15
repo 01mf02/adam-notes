@@ -3,7 +3,56 @@
 This is the research notebook for my FWF project in Amsterdam.
 
 
-2011-11-18
+2022-06-15
+----------
+
+The equality relation on terms in Dedukti does
+neither consider the names of variables nor the domain of abstractions.
+I implemented the same behaviour in Kontroli, yielding the following code:
+
+~~~ rust
+impl<V, Tm: PartialEq> PartialEq for Comb<V, Tm> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Appl(head1, args1), Self::Appl(head2, args2)) => {
+                head1 == head2 && args1 == args2
+            }
+            (Self::Abst(_, _, tm1), Self::Abst(_, _, tm2)) => tm1 == tm2,
+            (Self::Prod(_, ty1, tm1), Self::Prod(_, ty2, tm2)) => ty1 == ty2 && tm1 == tm2,
+            _ => false,
+        }
+    }
+}
+impl<V, Tm: Eq> Eq for Comb<V, Tm> {}
+~~~
+
+I compiled this to a binary `kocheck-impleq` and called the version that instead
+automatically derives `Eq` `kocheck-deriveeq`.
+The evaluation results on my ThinkPad X230 are as follows:
+
+~~~
+$ hyperfine -w1 -L ver impl,derive "target/release/kocheck-{ver}eq koeval-itp/isabelle_hol/isaexport.dk --eta"
+Benchmark #1: target/release/kocheck-impleq koeval-itp/isabelle_hol/isaexport.dk --eta
+  Time (mean ± σ):     227.213 s ±  6.534 s    [User: 220.402 s, System: 3.935 s]
+  Range (min … max):   220.843 s … 240.934 s    10 runs
+
+Benchmark #2: target/release/kocheck-deriveeq koeval-itp/isabelle_hol/isaexport.dk --eta
+  Time (mean ± σ):     221.569 s ±  0.806 s    [User: 219.135 s, System: 2.417 s]
+  Range (min … max):   220.220 s … 222.593 s    10 runs
+~~~
+
+Interestingly, doing *less* work for the comparison seems to *increase* the time.
+Perhaps this is because the manual `Eq` makes more terms equal,
+which could change the behaviour of some algorithms.
+
+Furthermore, the variance of the version using the manual `Eq` implementation is much higher.
+No idea why. (I made one warm-up run with `-w1`.)
+
+So for now, I stay with the automatically derived `Eq`.
+
+
+
+2021-11-18
 ----------
 
 To partially answer the first question from my last post:
@@ -40,7 +89,7 @@ Once this is achieved, this should give us
 better means to compare clausal and nonclausal proof search.
 
 
-2011-11-16
+2021-11-16
 ----------
 
 Last Friday, I have finished the implementation of
