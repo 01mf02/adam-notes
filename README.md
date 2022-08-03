@@ -1,6 +1,21 @@
 # Amsterdam notes
 
-This is the research notebook for my FWF project in Amsterdam.
+This is the research notebook for my FWF project in Amsterdam / Innsbruck.
+
+
+2022-08-03
+----------
+
+To benchmark the time that Rust needs to read files:
+
+~~~
+fn main() -> std::io::Result<()> {
+    for arg in std::env::args().skip(1) {
+        let _s = std::fs::read_to_string(&arg)?;
+    }
+    Ok(())
+}
+~~~
 
 
 2022-06-15
