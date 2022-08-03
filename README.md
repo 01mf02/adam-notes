@@ -17,6 +17,39 @@ fn main() -> std::io::Result<()> {
 }
 ~~~
 
+And when we're already at it:
+Here is a little program that is a light version of `ts` ---
+it timestamps each line from stdin with the time elapsed since the
+start of the program.
+I wrote it because `ts` performs unconditional line buffering,
+which hurts performance when writing to files, for example.
+
+~~~
+use std::{io, time};
+
+fn main() -> io::Result<()> {
+    let stdout = io::stdout().lock();
+    if atty::is(atty::Stream::Stdout) {
+        real_main(stdout)
+    } else {
+        real_main(io::BufWriter::new(stdout))
+    }
+}
+
+fn real_main(mut stdout: impl io::Write) -> io::Result<()> {
+    let now = time::Instant::now();
+    for line in io::stdin().lines() {
+        let line = line?;
+        let elapsed = now.elapsed().as_secs_f64();
+        writeln!(stdout, "{elapsed} {line}")?;
+    }
+    Ok(())
+}
+~~~
+
+Only dependency: `atty` 0.2.14
+
+
 
 2022-06-15
 ----------
